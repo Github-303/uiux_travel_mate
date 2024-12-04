@@ -10,6 +10,7 @@ import SplashScreen from './screens/SplashScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import OtpVerificationScreen from './screens/OtpVerificationScreen';
 import HomeScreen from './screens/HomeScreen';
 import Hotelslist from './screens/Hotelslist';
@@ -96,6 +97,7 @@ const App = () => {
           <RootStack.Screen name="LoginScreen" component={LoginScreen} />
           <RootStack.Screen name="RegisterScreen" component={RegisterScreen} />
           <RootStack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
+          <RootStack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
           <RootStack.Screen name="OtpVerificationScreen" component={OtpVerificationScreen} />
           <RootStack.Screen name="Main" component={MainNavigator} />
         </RootStack.Navigator>

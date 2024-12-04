@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -14,6 +14,7 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isChecked, setIsChecked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
 
   const validators = {
@@ -30,7 +31,7 @@ export default function RegisterScreen() {
     },
     mobile: (value) => {
       if (!value) return 'Mobile number is required';
-      if (!/^\d{10}$/.test(value)) return 'Please enter a valid 10-digit mobile number';
+      if (!/^0\d{9}$/.test(value)) return 'Please enter a valid mobile number (e.g., 0845924299)';
       return null;
     },
     password: (value) => {
@@ -80,9 +81,42 @@ export default function RegisterScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      navigation.navigate('OtpVerificationScreen');
+      setIsLoading(true);
+      try {
+        const response = await fetch('https://twisty-roomy-tortoise.glitch.me/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            fullName: formData.fullName,
+            mobile: formData.mobile
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Registration successful, pass token to OTP screen
+          navigation.navigate('OtpVerificationScreen', { token: data.token });
+        } else {
+          setErrors(prev => ({
+            ...prev,
+            submit: data.message || 'Registration failed. Please try again.'
+          }));
+        }
+      } catch (error) {
+        setErrors(prev => ({
+          ...prev,
+          submit: 'Network error. Please check your connection and try again.'
+        }));
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -104,6 +138,7 @@ export default function RegisterScreen() {
             value={formData.fullName}
             onChangeText={(text) => handleChange('fullName', text)}
             onBlur={() => handleBlur('fullName')}
+            editable={!isLoading}
           />
         </View>
         {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
@@ -117,6 +152,7 @@ export default function RegisterScreen() {
             value={formData.email}
             onChangeText={(text) => handleChange('email', text)}
             onBlur={() => handleBlur('email')}
+            editable={!isLoading}
           />
         </View>
         {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -125,11 +161,13 @@ export default function RegisterScreen() {
           <FontAwesome name="phone" size={20} color="#0090FF" style={styles.icon} />
           <TextInput 
             style={styles.input} 
-            placeholder="Mobile Number" 
+            placeholder="Mobile Number (e.g., 0845924299)" 
             keyboardType="phone-pad"
             value={formData.mobile}
             onChangeText={(text) => handleChange('mobile', text)}
             onBlur={() => handleBlur('mobile')}
+            editable={!isLoading}
+            maxLength={10}
           />
         </View>
         {errors.mobile && <Text style={styles.errorText}>{errors.mobile}</Text>}
@@ -143,18 +181,29 @@ export default function RegisterScreen() {
             value={formData.password}
             onChangeText={(text) => handleChange('password', text)}
             onBlur={() => handleBlur('password')}
+            editable={!isLoading}
           />
         </View>
         {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+        {errors.submit && <Text style={[styles.errorText, styles.submitError]}>{errors.submit}</Text>}
+
+        <TouchableOpacity 
+          style={[styles.button, isLoading && styles.buttonDisabled]} 
+          onPress={handleSubmit}
+          disabled={isLoading}
+        >
           <LinearGradient
             colors={['#0090FF','#00FF94' ]}
             start={{ x: 0.0, y: 0.0 }}
             end={{ x: 1.0, y: 1.0 }}
             style={styles.buttonGradient}
           >
-            <Text style={styles.buttonText}>Create Account</Text>
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Create Account</Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
 
@@ -250,6 +299,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     overflow: 'hidden',
   },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
   buttonGradient: {
     paddingVertical: 15,
     alignItems: 'center',
@@ -326,5 +378,9 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#00BD6B',
     fontWeight: 'bold',
+  },
+  submitError: {
+    textAlign: 'center',
+    marginBottom: 10,
   },
 });

@@ -19,7 +19,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 const { width, height } = Dimensions.get('window');
 const cardWidth = width - 40;
-const STATUSBAR_HEIGHT = Platform.OS === 'ios' ? 20 : StatusBar.currentHeight;
+const STATUSBAR_HEIGHT = Platform.OS === 'android' ? 20 : StatusBar.currentHeight;
 
 // Import images
 const Muiten = require('../assets/menu.png');
@@ -74,6 +74,9 @@ const PaymentMethods = () => {
   const [amount, setAmount] = useState('127');
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  
+  // PayPal Client ID - Replace this with your actual PayPal Client ID
+  const PAYPAL_CLIENT_ID = 'AQwaPBBf1j2kI_WrIuXPL4QD0s8Z9ztLHxXXDgRPF2Wk-W6zWVQZQwp_L3RlQXpNsHDGzHgCZbWg_Wqa';
 
   const paypalHTML = `
     <html>
@@ -109,56 +112,91 @@ const PaymentMethods = () => {
         <div id="error-message" class="error-message">
           Failed to load PayPal. Please try again.
         </div>
-        <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
         <script>
-          window.onerror = function(msg, url, line) {
-            document.getElementById('error-message').style.display = 'block';
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'error',
-              error: msg
-            }));
-            return true;
-          };
-
-          paypal.Buttons({
-            style: {
-              layout: 'vertical',
-              color:  'blue',
-              shape:  'rect',
-              label:  'pay'
-            },
-            createOrder: function(data, actions) {
-              return actions.order.create({
-                purchase_units: [{
-                  amount: {
-                    value: '${(parseFloat(amount) / 23000).toFixed(2)}'
-                  }
-                }]
-              });
-            },
-            onApprove: function(data, actions) {
-              return actions.order.capture().then(function(details) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'success',
-                  details: details
-                }));
-              });
-            },
-            onError: function(err) {
+          // Function to load PayPal SDK
+          function loadPayPalSDK() {
+            const script = document.createElement('script');
+            script.src = "https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD";
+            script.async = true;
+            script.defer = true;
+            
+            script.onload = function() {
+              setTimeout(initializePayPalButtons, 1000); // Give SDK time to initialize
+            };
+            
+            script.onerror = function() {
               document.getElementById('error-message').style.display = 'block';
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 type: 'error',
-                error: err
+                error: 'PayPal SDK failed to load'
               }));
+            };
+            
+            document.body.appendChild(script);
+          }
+
+          // Function to initialize PayPal buttons
+          function initializePayPalButtons() {
+            if (typeof paypal === 'undefined') {
+              document.getElementById('error-message').style.display = 'block';
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'error',
+                error: 'PayPal SDK not available'
+              }));
+              return;
             }
-          }).render('#paypal-button-container')
-            .catch(function(error) {
+
+            try {
+              paypal.Buttons({
+                style: {
+                  layout: 'vertical',
+                  color:  'blue',
+                  shape:  'rect',
+                  label:  'pay'
+                },
+                createOrder: function(data, actions) {
+                  return actions.order.create({
+                    purchase_units: [{
+                      amount: {
+                        value: '${(parseFloat(amount) / 23000).toFixed(2)}'
+                      }
+                    }]
+                  });
+                },
+                onApprove: function(data, actions) {
+                  return actions.order.capture().then(function(details) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                      type: 'success',
+                      details: details
+                    }));
+                  });
+                },
+                onError: function(err) {
+                  document.getElementById('error-message').style.display = 'block';
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'error',
+                    error: err
+                  }));
+                }
+              }).render('#paypal-button-container')
+                .catch(function(error) {
+                  document.getElementById('error-message').style.display = 'block';
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'error',
+                    error: error.message
+                  }));
+                });
+            } catch (error) {
               document.getElementById('error-message').style.display = 'block';
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 type: 'error',
                 error: error.message
               }));
-            });
+            }
+          }
+
+          // Start loading PayPal SDK
+          loadPayPalSDK();
         </script>
       </body>
     </html>
@@ -367,10 +405,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 10,
     overflow: 'hidden',
-    marginTop: Platform.OS === 'ios' ? 10 : 0,
+    marginTop: Platform.OS === 'android' ? 10 : 0,
   },
   webview: {
-    height: Platform.OS === 'ios' ? 280 : 250,
+    height: Platform.OS === 'android' ? 280 : 250,
     backgroundColor: 'transparent',
   },
   qrContainer: {
@@ -379,7 +417,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
-    marginBottom: Platform.OS === 'ios' ? 20 : 0,
+    marginBottom: Platform.OS === 'android' ? 20 : 0,
   },
   qrTitle: {
     fontSize: 16,
@@ -428,7 +466,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
     backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'ios' ? 15 : 20,
+    paddingTop: Platform.OS === 'android' ? 15 : 20,
   },
   headerTitle: {
     fontSize: 18,
@@ -465,7 +503,7 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     padding: 20,
-    height: 200,
+    height: 300,
     borderRadius: 20,
   },
   chipContainer: {

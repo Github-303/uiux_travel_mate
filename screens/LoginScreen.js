@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
 
   const validateEmail = (email) => {
@@ -64,7 +65,7 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     // Validate both fields
     const emailError = !email ? 'Email is required' : !validateEmail(email) ? 'Please enter a valid email' : null;
     const passwordError = !password ? 'Password is required' : !validatePassword(password) ? 'Password must be at least 6 characters' : null;
@@ -79,15 +80,37 @@ export default function LoginScreen() {
       password: true
     });
 
-    // If no errors and credentials match
+    // If no errors, proceed with API call
     if (!emailError && !passwordError) {
-      if (email === 'abc@gmail.com' && password === '123456') {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Main' }],
+      setIsLoading(true);
+      try {
+        const response = await fetch('https://twisty-roomy-tortoise.glitch.me/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+          }),
         });
-      } else {
-        setErrors(prev => ({ ...prev, login: 'Invalid email or password' }));
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Login successful
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Main' }],
+          });
+        } else {
+          // Login failed
+          setErrors(prev => ({ ...prev, login: data.message || 'Invalid email or password' }));
+        }
+      } catch (error) {
+        setErrors(prev => ({ ...prev, login: 'Network error. Please try again.' }));
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -111,6 +134,7 @@ export default function LoginScreen() {
             value={email}
             onChangeText={handleEmailChange}
             onBlur={() => handleBlur('email')}
+            editable={!isLoading}
           />
         </View>
         {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
@@ -124,24 +148,29 @@ export default function LoginScreen() {
             value={password}
             onChangeText={handlePasswordChange}
             onBlur={() => handleBlur('password')}
+            editable={!isLoading}
           />
         </View>
         {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
-        <TouchableOpacity>
-          <Text onPress={() => navigation.navigate('ForgotPasswordScreen')} style={styles.forgotPassword}>Forgot Password?</Text>
+        <TouchableOpacity disabled={isLoading}>
+          <Text onPress={() => navigation.navigate('ForgotPasswordScreen')} style={[styles.forgotPassword, isLoading && styles.disabledText]}>Forgot Password?</Text>
         </TouchableOpacity>
 
         {errors.login && <Text style={[styles.errorText, styles.loginError]}>{errors.login}</Text>}
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <TouchableOpacity style={[styles.button, isLoading && styles.disabledButton]} onPress={handleLogin} disabled={isLoading}>
           <LinearGradient
             colors={['#00BFFF', '#00FF94']}
             start={{ x: 0.0, y: 0.0 }}
             end={{ x: 1.0, y: 1.0 }}
             style={styles.buttonGradient}
           >
-            <Text style={styles.buttonText}>Sign In</Text>
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Sign In</Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
 
@@ -285,5 +314,11 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#00BD6B',
     fontWeight: 'bold',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    opacity: 0.5,
   },
 });

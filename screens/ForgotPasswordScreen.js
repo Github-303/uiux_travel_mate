@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -8,6 +8,7 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [touched, setTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
 
   const validateEmail = (email) => {
@@ -39,7 +40,7 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
     if (!email) {
       setError('Email is required');
       setTouched(true);
@@ -52,9 +53,39 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    // If validation passes, proceed with password reset
-    alert('Password reset link has been sent to: ' + email);
-    navigation.goBack(); // Return to login screen after successful submission
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://twisty-roomy-tortoise.glitch.me/api/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert(
+          'Success',
+          'OTP has been sent to your email.',
+          [
+            { 
+              text: 'OK', 
+              onPress: () => navigation.navigate('ResetPasswordScreen', { email: email })
+            }
+          ]
+        );
+      } else {
+        setError(data.message || 'Failed to process request. Please try again.');
+      }
+    } catch (error) {
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -81,26 +112,38 @@ export default function ForgotPasswordScreen() {
             value={email}
             onChangeText={handleEmailChange}
             onBlur={handleBlur}
+            editable={!isLoading}
           />
         </View>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.button} onPress={handleForgotPassword}>
+        <TouchableOpacity 
+          style={[styles.button, isLoading && styles.buttonDisabled]} 
+          onPress={handleForgotPassword}
+          disabled={isLoading}
+        >
           <LinearGradient
             colors={['#00BFFF', '#00FF94']}
             start={{ x: 0.0, y: 0.0 }}
             end={{ x: 1.0, y: 1.0 }}
             style={styles.buttonGradient}
           >
-            <Text style={styles.buttonText}>Submit</Text>
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Submit</Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
+          disabled={isLoading}
         >
-          <Text style={styles.backButtonText}>Back to Login</Text>
+          <Text style={[styles.backButtonText, isLoading && styles.textDisabled]}>
+            Back to Login
+          </Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -127,7 +170,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignSelf: 'flex-start',
     width: '80%',
-    paddingLeft: 15,
+    paddingLeft: 70,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
@@ -166,6 +210,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     overflow: 'hidden',
   },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
   buttonGradient: {
     paddingVertical: 15,
     alignItems: 'center',
@@ -182,5 +229,8 @@ const styles = StyleSheet.create({
     color: '#00BFFF',
     fontSize: 16,
     fontWeight: '500',
+  },
+  textDisabled: {
+    opacity: 0.5,
   },
 });
