@@ -135,9 +135,6 @@ eas build -p ios
 - [An - Tiến] - Frontend Developer
 - [**Khánh**] - Backend Developer
 
-## 📄 License
-[Thêm thông tin license]
-
 ## 🤝 Đóng Góp
 Chúng tôi luôn chào đón mọi đóng góp từ cộng đồng.
 
