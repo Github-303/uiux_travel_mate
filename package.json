@@ -15,7 +15,7 @@
     "@react-navigation/drawer": "*",
     "@react-navigation/native": "*",
     "@react-navigation/stack": "*",
-    "expo": "~52.0.11",
+    "expo": "~54.0.32",
     "expo-auth-session": "^6.0.1",
     "expo-google-app-auth": "^10.0.0",
     "expo-image-picker": "^16.0.3",
